@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
-	"github.com/sherifzaher/clone-simplebank/db"
+	"github.com/sherifzaher/clone-simplebank/db/sqlc"
 	"github.com/sherifzaher/clone-simplebank/util"
 	"log"
 )

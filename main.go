@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	_ "github.com/lib/pq"
 	"github.com/sherifzaher/clone-simplebank/api"
-	"github.com/sherifzaher/clone-simplebank/db"
+	"github.com/sherifzaher/clone-simplebank/db/sqlc"
 	"log"
 
 	"github.com/sherifzaher/clone-simplebank/util"
