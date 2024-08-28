@@ -24,3 +24,15 @@ func TestCreateAccount(t *testing.T) {
 	require.NotEmpty(t, acc)
 	require.True(t, acc.Balance >= 1)
 }
+
+func TestGetAccount(t *testing.T) {
+	acc, err := randomAccount()
+	require.NoError(t, err)
+	require.NotEmpty(t, acc)
+	require.True(t, acc.Balance >= 1)
+
+	account, err := testQueries.GetAccount(context.Background(), acc.ID)
+	require.NoError(t, err)
+	require.NotEmpty(t, account)
+	require.Equal(t, account, acc)
+}
