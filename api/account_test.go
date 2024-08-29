@@ -83,45 +83,6 @@ func TestAccountAPI(t *testing.T) {
 			tc.checkResponse(recorder)
 		})
 	}
-
-	//ctrl := gomock.NewController(t)
-	//defer ctrl.Finish()
-	//
-	//store := mockdb.NewMockStore(ctrl)
-	//server := newTestServer(t, store)
-	//
-	//storeArg := db.CreateAccountParams{
-	//	Owner:    createdAccount.Owner,
-	//	Currency: createdAccount.Currency,
-	//	Balance:  0,
-	//}
-	//
-	//store.
-	//	EXPECT().
-	//	CreateAccount(gomock.Any(), storeArg).
-	//	Times(1).
-	//	Return(db.Account{}, nil)
-	//
-	//params := CreateAccountParams{
-	//	Owner:    createdAccount.Owner,
-	//	Currency: createdAccount.Currency,
-	//}
-	//
-	//arg, err := json.Marshal(params)
-	//require.NoError(t, err)
-	//
-	//url := fmt.Sprintf("/accounts")
-	//request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(arg))
-	//recorder := httptest.NewRecorder()
-	//require.NoError(t, err)
-	//
-	//server.router.ServeHTTP(recorder, request)
-	//checkResponse(t, recorder)
-}
-
-func checkResponse(t *testing.T, recorder *httptest.ResponseRecorder) {
-	fmt.Println(recorder.Body, recorder.Code)
-	require.Equal(t, http.StatusOK, recorder.Code)
 }
 
 func requireBodyMatchAccount(t *testing.T, body *bytes.Buffer, account db.Account) {

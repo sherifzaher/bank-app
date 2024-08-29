@@ -20,4 +20,8 @@ test:
 	go test -v ./...
 server:
 	go run main.go
+build:
+	go build -o server main.go
+run-prod:
+	./server
 .PHONY: sqlc migrateup migratedown createdb postgres dropdb server mock

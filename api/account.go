@@ -1,9 +1,10 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	db "github.com/sherifzaher/clone-simplebank/db/sqlc"
-	"net/http"
 )
 
 type CreateAccountParams struct {
@@ -34,7 +35,7 @@ func (server *Server) createAccount(ctx *gin.Context) {
 }
 
 type GetAccountParams struct {
-	ID int64 `json:"id"`
+	ID int64 `uri:"id" json:"id"`
 }
 
 func (server *Server) getAccount(ctx *gin.Context) {

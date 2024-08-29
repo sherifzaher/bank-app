@@ -29,7 +29,7 @@ func main() {
 	store := db.NewStore(conn)
 	server, err := api.NewServer(config, store)
 	if err != nil {
-		log.Fatal("error during run the server %v", err)
+		log.Fatalf("error during run the server %v", err)
 		return
 	}
 
