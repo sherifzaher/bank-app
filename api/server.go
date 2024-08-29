@@ -1,12 +1,13 @@
 package api
 
 import (
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"github.com/sherifzaher/clone-simplebank/db/sqlc"
 	"github.com/sherifzaher/clone-simplebank/util"
-	"log"
 )
 
 type Server struct {
@@ -31,7 +32,10 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 
 func (server *Server) setupRouter() {
 	router := gin.Default()
+
 	router.POST("/accounts", server.createAccount)
+	router.GET("/accounts/:id", server.getAccount)
+
 	server.router = router
 }
 
