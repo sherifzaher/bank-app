@@ -1,9 +1,11 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 	db "github.com/sherifzaher/clone-simplebank/db/sqlc"
 )
 
@@ -26,7 +28,13 @@ func (server *Server) createAccount(ctx *gin.Context) {
 	}
 
 	account, err := server.store.CreateAccount(ctx, arg)
-	if err != nil {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		switch pqErr.Code.Name() {
+		case "foreign_key_violation", "unique_violation":
+			ctx.JSON(http.StatusForbidden, errorResponse(err))
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -34,21 +42,64 @@ func (server *Server) createAccount(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, account)
 }
 
-type GetAccountParams struct {
-	ID int64 `uri:"id" json:"id"`
+type GetAccountUriParams struct {
+	ID int64 `uri:"id" binding:"required"`
+}
+
+type GetAccountQueryParams struct {
+	Owner    string `form:"owner" binding:"required"`
+	Currency string `form:"currency" binding:"required,currency"`
 }
 
 func (server *Server) getAccount(ctx *gin.Context) {
-	var accountID GetAccountParams
-	if err := ctx.ShouldBindQuery(&accountID); err != nil {
+	var uriParams GetAccountUriParams
+	if err := ctx.ShouldBindUri(&uriParams); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
-	account, err := server.store.GetAccount(ctx, accountID.ID)
+	var queryParams GetAccountQueryParams
+	if err := ctx.ShouldBindQuery(&queryParams); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	account, err := server.store.GetAccount(ctx, db.GetAccountParams{
+		ID:       uriParams.ID,
+		Currency: queryParams.Currency,
+		Owner:    queryParams.Owner,
+	})
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, errorResponse(err))
+		errString, statusCode := GetError(err)
+		ctx.JSON(statusCode, errString)
+		return
 	}
 
 	ctx.JSON(http.StatusOK, account)
+}
+
+type ListAccountParams struct {
+	Owner      string `form:"owner" binding:"required"`
+	PageNumber int32  `form:"page_number" binding:"required,min=1"`
+	PageSize   int32  `form:"page_size" binding:"required,min=5,max=10"`
+}
+
+func (server *Server) listAccounts(ctx *gin.Context) {
+	var req ListAccountParams
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	accounts, err := server.store.ListAccounts(ctx, db.ListAccountsParams{
+		Limit:  req.PageSize,
+		Offset: (req.PageNumber - 1) * req.PageSize,
+		Owner:  req.Owner,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, accounts)
 }

@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -25,8 +26,9 @@ func randomAccount(owner string) db.Account {
 	}
 }
 
-func TestAccountAPI(t *testing.T) {
-	account := randomAccount(util.RandomOwner())
+func TestCreateAccountAPI(t *testing.T) {
+	user, _ := randomUser(t)
+	account := randomAccount(user.Username)
 
 	testCases := []struct {
 		name          string
@@ -35,7 +37,7 @@ func TestAccountAPI(t *testing.T) {
 		checkResponse func(recorder *httptest.ResponseRecorder)
 	}{
 		{
-			name: "Create Account",
+			name: "OK - code=200",
 			buildStub: func(store *mockdb.MockStore) {
 				store.
 					EXPECT().
@@ -47,7 +49,7 @@ func TestAccountAPI(t *testing.T) {
 					Return(account, nil)
 			},
 			buildRequest: func() (string, string, io.Reader) {
-				url := fmt.Sprintf("/accounts")
+				url := "/accounts"
 				arg := CreateAccountParams{
 					Owner:    account.Owner,
 					Currency: account.Currency,
@@ -59,6 +61,51 @@ func TestAccountAPI(t *testing.T) {
 			checkResponse: func(recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, recorder.Code)
 				requireBodyMatchAccount(t, recorder.Body, account)
+			},
+		},
+		{
+			name: "MissedParams - code=400",
+			buildStub: func(store *mockdb.MockStore) {
+				store.
+					EXPECT().
+					CreateAccount(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			buildRequest: func() (string, string, io.Reader) {
+				url := "/accounts"
+				//arg := CreateAccountParams{
+				//	Owner:    account.Owner,
+				//	Currency: account.Currency,
+				//}
+				//params, err := json.Marshal(arg)
+				//require.NoError(t, err)
+				return url, http.MethodPost, bytes.NewReader(nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+				//requireBodyMatchAccount(t, recorder.Body, account)
+			},
+		},
+		{
+			name: "Invalid Currency - code=400",
+			buildStub: func(store *mockdb.MockStore) {
+				store.
+					EXPECT().
+					CreateAccount(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			buildRequest: func() (string, string, io.Reader) {
+				url := "/accounts"
+				arg := CreateAccountParams{
+					Owner:    account.Owner,
+					Currency: "USDS",
+				}
+				params, err := json.Marshal(arg)
+				require.NoError(t, err)
+				return url, http.MethodPost, bytes.NewReader(params)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
 			},
 		},
 	}
@@ -79,6 +126,186 @@ func TestAccountAPI(t *testing.T) {
 			require.NoError(t, err)
 
 			recorder := httptest.NewRecorder()
+			server.router.ServeHTTP(recorder, request)
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
+func TestListAccountsAPI(t *testing.T) {
+	user, _ := randomUser(t)
+
+	n := 5
+	accounts := make([]db.Account, n)
+
+	for i := 0; i < n; i++ {
+		accounts[i] = randomAccount(user.Username)
+	}
+
+	type Query struct {
+		PageID   int32
+		PageSize int32
+	}
+
+	testCases := []struct {
+		name          string
+		buildStub     func(store *mockdb.MockStore)
+		query         Query
+		checkResponse func(recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			buildStub: func(store *mockdb.MockStore) {
+				arg := db.ListAccountsParams{
+					Owner:  user.Username,
+					Limit:  5,
+					Offset: 0,
+				}
+				store.
+					EXPECT().
+					ListAccounts(gomock.Any(), arg).
+					Times(1).
+					Return(accounts, nil)
+			},
+			query: Query{PageID: 1, PageSize: int32(n)},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+			},
+		},
+		{
+			name: "Internal Server Error",
+			buildStub: func(store *mockdb.MockStore) {
+				store.
+					EXPECT().
+					ListAccounts(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]db.Account{}, sql.ErrConnDone)
+			},
+			query: Query{PageID: 1, PageSize: int32(n)},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "Invalid Page Size",
+			buildStub: func(store *mockdb.MockStore) {
+				store.
+					EXPECT().
+					ListAccounts(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			query: Query{PageID: 1, PageSize: 60000},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name: "Invalid Page Number",
+			buildStub: func(store *mockdb.MockStore) {
+				store.
+					EXPECT().
+					ListAccounts(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			query: Query{PageID: -1, PageSize: int32(n)},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			server := newTestStore(t, store)
+			tc.buildStub(store)
+
+			recorder := httptest.NewRecorder()
+
+			url := "/accounts"
+			request, err := http.NewRequest(http.MethodGet, url, nil)
+			require.NoError(t, err)
+
+			q := request.URL.Query()
+			q.Add("page_size", fmt.Sprintf("%d", tc.query.PageSize))
+			q.Add("page_number", fmt.Sprintf("%d", tc.query.PageID))
+			q.Add("owner", user.Username)
+			request.URL.RawQuery = q.Encode()
+
+			server.router.ServeHTTP(recorder, request)
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
+func TestGetAccountAPI(t *testing.T) {
+	user, _ := randomUser(t)
+	account := randomAccount(user.Username)
+
+	testCases := []struct {
+		name          string
+		buildStub     func(store *mockdb.MockStore)
+		checkResponse func(recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			buildStub: func(store *mockdb.MockStore) {
+				arg := db.GetAccountParams{
+					ID:       account.ID,
+					Currency: account.Currency,
+					Owner:    user.Username,
+				}
+				store.
+					EXPECT().
+					GetAccount(gomock.Any(), arg).
+					Times(1).
+					Return(account, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+			},
+		},
+		//{
+		//	name: "Invalid Page Number",
+		//	buildStub: func(store *mockdb.MockStore) {
+		//		store.
+		//			EXPECT().
+		//			ListAccounts(gomock.Any(), gomock.Any()).
+		//			Times(0)
+		//	},
+		//	checkResponse: func(recorder *httptest.ResponseRecorder) {
+		//		require.Equal(t, http.StatusBadRequest, recorder.Code)
+		//	},
+		//},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			server := newTestStore(t, store)
+			tc.buildStub(store)
+
+			recorder := httptest.NewRecorder()
+
+			url := fmt.Sprintf("/accounts/%v", account.ID)
+			request, err := http.NewRequest(http.MethodGet, url, nil)
+			require.NoError(t, err)
+
+			q := request.URL.Query()
+			q.Add("owner", user.Username)
+			q.Add("currency", account.Currency)
+			request.URL.RawQuery = q.Encode()
+
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(recorder)
 		})

@@ -103,10 +103,18 @@ func TestTransferTxDeadlock(t *testing.T) {
 
 	// check the final updated one
 
-	updateAccount1, err := testQueries.GetAccount(context.Background(), account1.ID)
+	updateAccount1, err := testQueries.GetAccount(context.Background(), GetAccountParams{
+		Owner:    account1.Owner,
+		Currency: account1.Currency,
+		ID:       account1.ID,
+	})
 	require.NoError(t, err)
 
-	updateAccount2, err := testQueries.GetAccount(context.Background(), account2.ID)
+	updateAccount2, err := testQueries.GetAccount(context.Background(), GetAccountParams{
+		Owner:    account2.Owner,
+		Currency: account2.Currency,
+		ID:       account2.ID,
+	})
 	require.NoError(t, err)
 
 	fmt.Println(">> after: ", updateAccount1.Balance, updateAccount2.Balance)

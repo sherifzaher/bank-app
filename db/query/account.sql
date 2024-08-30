@@ -8,7 +8,7 @@ RETURNING *;
 
 -- name: GetAccount :one
 SELECT * from accounts
-WHERE id = $1 LIMIT 1;
+WHERE id = $1 AND currency = $2 AND owner = $3 LIMIT 1;
 
 -- name: GetAccountForUpdate :one
 SELECT * from accounts
