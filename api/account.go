@@ -66,9 +66,9 @@ func (server *Server) getAccount(ctx *gin.Context) {
 
 	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	account, err := server.store.GetAccount(ctx, db.GetAccountParams{
+		Owner:    authPayload.Username,
 		ID:       uriParams.ID,
 		Currency: queryParams.Currency,
-		Owner:    authPayload.Username,
 	})
 	if err != nil {
 		errString, statusCode := GetError(err)

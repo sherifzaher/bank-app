@@ -34,16 +34,19 @@ func TestCreateAccountAPI(t *testing.T) {
 		name          string
 		buildStub     func(store *mockdb.MockStore)
 		buildRequest  func() (string, string, io.Reader)
+		authUsername  string
 		checkResponse func(recorder *httptest.ResponseRecorder)
 	}{
 		{
-			name: "OK - code=200",
+			name:         "OK - code=200",
+			authUsername: user.Username,
 			buildStub: func(store *mockdb.MockStore) {
 				store.
 					EXPECT().
 					CreateAccount(gomock.Any(), db.CreateAccountParams{
 						Owner:    account.Owner,
 						Currency: account.Currency,
+						Balance:  0,
 					}).
 					Times(1).
 					Return(account, nil)
@@ -51,7 +54,6 @@ func TestCreateAccountAPI(t *testing.T) {
 			buildRequest: func() (string, string, io.Reader) {
 				url := "/accounts"
 				arg := CreateAccountParams{
-					Owner:    account.Owner,
 					Currency: account.Currency,
 				}
 				params, err := json.Marshal(arg)
@@ -64,7 +66,8 @@ func TestCreateAccountAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "MissedParams - code=400",
+			name:         "MissedParams - code=400",
+			authUsername: user.Username,
 			buildStub: func(store *mockdb.MockStore) {
 				store.
 					EXPECT().
@@ -87,7 +90,8 @@ func TestCreateAccountAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "Invalid Currency - code=400",
+			name:         "Invalid Currency - code=400",
+			authUsername: user.Username,
 			buildStub: func(store *mockdb.MockStore) {
 				store.
 					EXPECT().
@@ -97,7 +101,6 @@ func TestCreateAccountAPI(t *testing.T) {
 			buildRequest: func() (string, string, io.Reader) {
 				url := "/accounts"
 				arg := CreateAccountParams{
-					Owner:    account.Owner,
 					Currency: "USDS",
 				}
 				params, err := json.Marshal(arg)
@@ -126,7 +129,7 @@ func TestCreateAccountAPI(t *testing.T) {
 			require.NoError(t, err)
 
 			recorder := httptest.NewRecorder()
-			createAndSetAuthToken(t, request, server.tokenMaker, tc.name)
+			createAndSetAuthToken(t, request, server.tokenMaker, tc.authUsername)
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(recorder)
 		})
@@ -152,10 +155,12 @@ func TestListAccountsAPI(t *testing.T) {
 		name          string
 		buildStub     func(store *mockdb.MockStore)
 		query         Query
+		authUsername  string
 		checkResponse func(recorder *httptest.ResponseRecorder)
 	}{
 		{
-			name: "OK",
+			name:         "OK",
+			authUsername: user.Username,
 			buildStub: func(store *mockdb.MockStore) {
 				arg := db.ListAccountsParams{
 					Owner:  user.Username,
@@ -174,7 +179,8 @@ func TestListAccountsAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "Internal Server Error",
+			name:         "Internal Server Error",
+			authUsername: user.Username,
 			buildStub: func(store *mockdb.MockStore) {
 				store.
 					EXPECT().
@@ -188,7 +194,8 @@ func TestListAccountsAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "Invalid Page Size",
+			name:         "Invalid Page Size",
+			authUsername: user.Username,
 			buildStub: func(store *mockdb.MockStore) {
 				store.
 					EXPECT().
@@ -201,7 +208,8 @@ func TestListAccountsAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "Invalid Page Number",
+			name:         "Invalid Page Number",
+			authUsername: user.Username,
 			buildStub: func(store *mockdb.MockStore) {
 				store.
 					EXPECT().
@@ -238,7 +246,7 @@ func TestListAccountsAPI(t *testing.T) {
 			q.Add("owner", user.Username)
 			request.URL.RawQuery = q.Encode()
 
-			createAndSetAuthToken(t, request, server.tokenMaker, tc.name)
+			createAndSetAuthToken(t, request, server.tokenMaker, tc.authUsername)
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(recorder)
 		})
@@ -252,15 +260,17 @@ func TestGetAccountAPI(t *testing.T) {
 	testCases := []struct {
 		name          string
 		buildStub     func(store *mockdb.MockStore)
+		authUsername  string
 		checkResponse func(recorder *httptest.ResponseRecorder)
 	}{
 		{
-			name: "OK",
+			name:         "OK",
+			authUsername: user.Username,
 			buildStub: func(store *mockdb.MockStore) {
 				arg := db.GetAccountParams{
+					Owner:    user.Username,
 					ID:       account.ID,
 					Currency: account.Currency,
-					Owner:    user.Username,
 				}
 				store.
 					EXPECT().
@@ -308,7 +318,7 @@ func TestGetAccountAPI(t *testing.T) {
 			q.Add("currency", account.Currency)
 			request.URL.RawQuery = q.Encode()
 
-			createAndSetAuthToken(t, request, server.tokenMaker, tc.name)
+			createAndSetAuthToken(t, request, server.tokenMaker, tc.authUsername)
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(recorder)
 		})

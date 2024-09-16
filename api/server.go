@@ -1,14 +1,13 @@
 package api
 
 import (
-	"github.com/sherifzaher/clone-simplebank/token"
-	"log"
-
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"github.com/sherifzaher/clone-simplebank/db/sqlc"
+	"github.com/sherifzaher/clone-simplebank/token"
 	"github.com/sherifzaher/clone-simplebank/util"
+	"log"
 )
 
 type Server struct {
@@ -52,6 +51,8 @@ func (server *Server) setupRouter() {
 	authRoutes.POST("/accounts", server.createAccount)
 	authRoutes.GET("/accounts/:id", server.getAccount)
 	authRoutes.GET("/accounts", server.listAccounts)
+
+	authRoutes.POST("/transfers", server.createTransfer)
 
 	server.router = router
 }
