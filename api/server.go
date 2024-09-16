@@ -43,7 +43,7 @@ func (server *Server) setupRouter() {
 	router := gin.Default()
 
 	router.POST("/users", server.createUser)
-	router.POST("/users/logins", server.loginUser)
+	router.POST("/users/login", server.loginUser)
 	router.GET("/users/:username", server.getUser)
 
 	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
