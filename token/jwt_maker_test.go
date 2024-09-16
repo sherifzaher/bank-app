@@ -9,9 +9,10 @@ import (
 
 func TestJWTMaker(t *testing.T) {
 	maker := JWTMaker{secretKey: "test"}
-	token, err := maker.CreateToken("sherif", time.Minute*15)
+	token, payload, err := maker.CreateToken("sherif", time.Minute*15)
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
+	require.NotEmpty(t, payload)
 	fmt.Println(token)
 
 	isValid, err := maker.VerifyToken(token)
