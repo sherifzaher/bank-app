@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"github.com/sherifzaher/clone-simplebank/token"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,7 +11,6 @@ import (
 )
 
 type CreateAccountParams struct {
-	Owner    string `json:"owner" binding:"required"`
 	Currency string `json:"currency" binding:"required,currency"`
 }
 
@@ -21,8 +21,9 @@ func (server *Server) createAccount(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	arg := db.CreateAccountParams{
-		Owner:    req.Owner,
+		Owner:    authPayload.Username,
 		Currency: req.Currency,
 		Balance:  0,
 	}
@@ -47,7 +48,6 @@ type GetAccountUriParams struct {
 }
 
 type GetAccountQueryParams struct {
-	Owner    string `form:"owner" binding:"required"`
 	Currency string `form:"currency" binding:"required,currency"`
 }
 
@@ -64,10 +64,11 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	account, err := server.store.GetAccount(ctx, db.GetAccountParams{
+		Owner:    authPayload.Username,
 		ID:       uriParams.ID,
 		Currency: queryParams.Currency,
-		Owner:    queryParams.Owner,
 	})
 	if err != nil {
 		errString, statusCode := GetError(err)
@@ -79,9 +80,8 @@ func (server *Server) getAccount(ctx *gin.Context) {
 }
 
 type ListAccountParams struct {
-	Owner      string `form:"owner" binding:"required"`
-	PageNumber int32  `form:"page_number" binding:"required,min=1"`
-	PageSize   int32  `form:"page_size" binding:"required,min=5,max=10"`
+	PageNumber int32 `form:"page_number" binding:"required,min=1"`
+	PageSize   int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
 
 func (server *Server) listAccounts(ctx *gin.Context) {
@@ -91,10 +91,11 @@ func (server *Server) listAccounts(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	accounts, err := server.store.ListAccounts(ctx, db.ListAccountsParams{
 		Limit:  req.PageSize,
 		Offset: (req.PageNumber - 1) * req.PageSize,
-		Owner:  req.Owner,
+		Owner:  authPayload.Username,
 	})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
