@@ -51,3 +51,4 @@ jobs:
           kubectl apply -f eks/aws-auth.yaml
           kubectl apply -f eks/deployment.yaml
           kubectl apply -f eks/service.yaml
+          kubectl rollout restart deployment simple-bank-api-deployment
