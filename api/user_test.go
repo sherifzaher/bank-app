@@ -121,6 +121,38 @@ func TestUserAPI(t *testing.T) {
 				//requireBodyMatchUser(t, recorder.Body, user, password)
 			},
 		},
+		{
+			name: "Login User",
+			buildStub: func(store *mockdb.MockStore) {
+				arg := LoginUserParams{
+					Username: user.Username,
+					Password: password,
+				}
+				store.
+					EXPECT().
+					GetUser(gomock.Any(), arg.Username).
+					Times(1).
+					Return(user, nil)
+				store.
+					EXPECT().
+					CreateSession(gomock.Any(), gomock.Any()).
+					Times(1)
+			},
+			buildRequest: func() (string, string, io.Reader) {
+				url := "/users/login"
+				arg := LoginUserParams{
+					Username: user.Username,
+					Password: password,
+				}
+				params, err := json.Marshal(arg)
+				require.NoError(t, err)
+				return url, http.MethodPost, bytes.NewReader(params)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				//requireBodyMatchUser(t, recorder.Body, user, password)
+			},
+		},
 	}
 
 	for i := range testCases {

@@ -29,10 +29,10 @@ func createAndSetAuthToken(t *testing.T, request *http.Request, tokenMaker token
 		return
 	}
 
-	token, err := tokenMaker.CreateToken(username, time.Minute)
+	authToken, _, err := tokenMaker.CreateToken(username, time.Minute)
 	require.NoError(t, err)
 
-	authorizationHeader := fmt.Sprintf("%s %s", authorizationTypeBearer, token)
+	authorizationHeader := fmt.Sprintf("%s %s", authorizationTypeBearer, authToken)
 	request.Header.Set(authorizationHeaderKey, authorizationHeader)
 }
 
