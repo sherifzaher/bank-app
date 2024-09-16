@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/sherifzaher/clone-simplebank/token"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -11,13 +12,22 @@ import (
 )
 
 type Server struct {
-	store  db.Store
-	config util.Config
-	router *gin.Engine
+	store      db.Store
+	config     util.Config
+	router     *gin.Engine
+	tokenMaker token.Maker
 }
 
 func NewServer(config util.Config, store db.Store) (*Server, error) {
-	server := &Server{store: store, config: config}
+	pasetoTokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
+	if err != nil {
+		return nil, err
+	}
+	server := &Server{
+		store:      store,
+		config:     config,
+		tokenMaker: pasetoTokenMaker,
+	}
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		err := v.RegisterValidation("currency", validCurrency)
@@ -33,12 +43,15 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 func (server *Server) setupRouter() {
 	router := gin.Default()
 
-	router.POST("/accounts", server.createAccount)
-	router.GET("/accounts/:id", server.getAccount)
-	router.GET("/accounts", server.listAccounts)
-
 	router.POST("/users", server.createUser)
+	router.POST("/users/login", server.loginUser)
 	router.GET("/users/:username", server.getUser)
+
+	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
+
+	authRoutes.POST("/accounts", server.createAccount)
+	authRoutes.GET("/accounts/:id", server.getAccount)
+	authRoutes.GET("/accounts", server.listAccounts)
 
 	server.router = router
 }

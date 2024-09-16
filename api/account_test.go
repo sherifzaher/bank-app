@@ -126,6 +126,7 @@ func TestCreateAccountAPI(t *testing.T) {
 			require.NoError(t, err)
 
 			recorder := httptest.NewRecorder()
+			createAndSetAuthToken(t, request, server.tokenMaker, tc.name)
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(recorder)
 		})
@@ -237,6 +238,7 @@ func TestListAccountsAPI(t *testing.T) {
 			q.Add("owner", user.Username)
 			request.URL.RawQuery = q.Encode()
 
+			createAndSetAuthToken(t, request, server.tokenMaker, tc.name)
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(recorder)
 		})
@@ -306,6 +308,7 @@ func TestGetAccountAPI(t *testing.T) {
 			q.Add("currency", account.Currency)
 			request.URL.RawQuery = q.Encode()
 
+			createAndSetAuthToken(t, request, server.tokenMaker, tc.name)
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(recorder)
 		})
