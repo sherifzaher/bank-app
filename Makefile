@@ -24,4 +24,17 @@ build:
 	go build -o server main.go
 run-prod:
 	./server
-.PHONY: sqlc migrateup migratedown createdb postgres dropdb server mock
+proto:
+	rm -f doc/swagger/*.swagger.json
+	rm -f pb/*.go
+
+	protoc --proto_path=proto --go_out=pb --go_opt=paths=source_relative \
+		--grpc-gateway_out=pb --grpc-gateway_opt paths=source_relative \
+		--go-grpc_out=pb --go-grpc_opt=paths=source_relative \
+    	--openapiv2_out=doc/swagger --openapiv2_opt=allow_merge,merge_file_name=simple_bank \
+    	proto/*.proto
+	statik -src=./doc/swagger -dest=./doc
+evans:
+	evans --host localhost --port 9090 -r repl
+
+.PHONY: sqlc migrateup migratedown createdb postgres dropdb server mock proto evans
