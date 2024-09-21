@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"database/sql"
-	"github.com/rakyll/statik/fs"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"net"
 	"net/http"
 	"os"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	_ "github.com/lib/pq"
+	"github.com/rakyll/statik/fs"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/sherifzaher/clone-simplebank/api"
 	"github.com/sherifzaher/clone-simplebank/db/sqlc"
 	_ "github.com/sherifzaher/clone-simplebank/doc/statik"
@@ -91,7 +91,8 @@ func runGatewayServer(config util.Config, store db.Store) {
 
 	log.Printf("HTTP gateway server running at: %s", config.HttpServerAddress)
 
-	err = http.Serve(listener, mux)
+	handler := gapi.HttpLogger(mux)
+	err = http.Serve(listener, handler)
 	if err != nil {
 		log.Fatal().Msg("cannot start HTTP gateway server")
 	}
@@ -113,7 +114,7 @@ func runGrpcServer(config util.Config, store db.Store) {
 		log.Fatal().Msgf("start gRPC server at %s:", listener.Addr().String())
 	}
 
-	log.Printf("gRPC server running at: %s", config.GrpcServerAddress)
+	log.Fatal().Msgf("gRPC server running at: %s", config.GrpcServerAddress)
 
 	err = grpcServer.Serve(listener)
 	if err != nil {
