@@ -65,7 +65,6 @@ func runTaskProcessor(redisOpts asynq.RedisClientOpt, store db.Store) {
 	if err != nil {
 		log.Error().Err(err).Msg("cannot create server")
 	}
-	//mux.HandleFunc(worker.TaskSendEmailVerify, proc)
 }
 
 func runGatewayServer(config util.Config, store db.Store, taskDistributor worker.TaskDistributor) {
