@@ -17,7 +17,7 @@ sqlc:
 mock:
 	mockgen -package mockdb -destination db/mock/store.go github.com/sherifzaher/clone-simplebank/db/sqlc Store
 test:
-	go test -v ./...
+	go test -v -cover -short ./...
 server:
 	go run main.go
 build:
