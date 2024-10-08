@@ -2,13 +2,16 @@ package gapi
 
 import (
 	"context"
+	"github.com/hibiken/asynq"
 	db "github.com/sherifzaher/clone-simplebank/db/sqlc"
 	"github.com/sherifzaher/clone-simplebank/pb"
 	"github.com/sherifzaher/clone-simplebank/util"
 	"github.com/sherifzaher/clone-simplebank/val"
+	"github.com/sherifzaher/clone-simplebank/worker"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"time"
 )
 
 func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
@@ -21,19 +24,33 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 		return nil, status.Errorf(codes.Internal, "failed to hash password: %s", err)
 	}
 
-	user, err := server.store.CreateUser(ctx, db.CreateUserParams{
-		Username:       req.GetUsername(),
-		Email:          req.GetEmail(),
-		FullName:       req.GetFullName(),
-		HashedPassword: hashedPassword,
-	})
+	arg := db.CreateUserTxParams{
+		CreateUserParams: db.CreateUserParams{
+			Username:       req.GetUsername(),
+			Email:          req.GetEmail(),
+			FullName:       req.GetFullName(),
+			HashedPassword: hashedPassword,
+		},
+		AfterCreateUser: func(user db.User) error {
+			arg := &worker.PayloadSendEmailTask{
+				Username: user.Username,
+			}
+			opts := []asynq.Option{
+				asynq.MaxRetry(10),
+				asynq.ProcessIn(10 * time.Second),
+				asynq.Queue(worker.QueueCritical),
+			}
+			return server.taskDistributor.DistributeSendVerifyEmailTask(ctx, arg, opts...)
+		},
+	}
 
+	txResult, err := server.store.CreateUserTx(ctx, arg)
 	if err != nil {
 		return nil, status.Errorf(codes.AlreadyExists, "username already exists: %s", err)
 	}
 
 	rsp := &pb.CreateUserResponse{
-		User: convertUser(user),
+		User: convertUser(txResult.User),
 	}
 	return rsp, nil
 }

@@ -30,7 +30,7 @@ func ValidateUsername(value string) error {
 }
 
 func ValidateFullName(value string) error {
-	if err := ValidateString(value, 3, 10); err != nil {
+	if err := ValidateString(value, 3, 16); err != nil {
 		return err
 	}
 	if !isValidFullName(value) {
