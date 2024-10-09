@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/hibiken/asynq"
+	"github.com/sherifzaher/clone-simplebank/mail"
 	"github.com/sherifzaher/clone-simplebank/worker"
 	"net"
 	"net/http"
@@ -52,14 +53,15 @@ func main() {
 		Addr: config.RedisHost,
 	}
 	taskDistributor := worker.NewRedisTaskDistributor(options)
-	go runTaskProcessor(options, store)
+	go runTaskProcessor(config, options, store)
 
 	go runGatewayServer(config, store, taskDistributor)
 	runGrpcServer(config, store, taskDistributor)
 }
 
-func runTaskProcessor(redisOpts asynq.RedisClientOpt, store db.Store) {
-	taskProcessor := worker.NewRedisTaskProcessor(redisOpts, store)
+func runTaskProcessor(config util.Config, redisOpts asynq.RedisClientOpt, store db.Store) {
+	mailer := mail.NewGmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpts, store, mailer)
 	log.Info().Msg("start task processor")
 	err := taskProcessor.Start()
 	if err != nil {

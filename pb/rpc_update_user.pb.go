@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.34.2
 // 	protoc        v5.28.1
-// source: rpc_update_user.go.proto
+// source: rpc_update_user.proto
 
 package pb
 
